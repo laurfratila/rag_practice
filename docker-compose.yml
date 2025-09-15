@@ -34,5 +34,26 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+
+  data_seed:
+    image: python:3.11-slim
+    container_name: rag-seed
+    working_dir: /data-gen
+    environment:
+      DATABASE_URL: postgresql+psycopg://raguser:ragpass@db:5432/ragdb
+      OUT_DIR: /data-gen/out
+    volumes:
+      - ./data-gen:/data-gen
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      bash -lc "
+      pip install --no-cache-dir pandas numpy faker sqlalchemy psycopg[binary] &&
+      python synthetic_insurance_ro.py --policies 20000 --seed 42 --out ./out &&
+      python load_to_pg.py
+      "
+
+
 volumes:
   db-data:
